@@ -4,7 +4,6 @@ import User from "../models/usersModel.js";
 import { comparePassword, hashPassword } from "../utils/passwordHelper.js";
 import JWT from "jsonwebtoken";
 import { sendResponse } from "../utils/responseHelper.js";
-
 export const signup = async (req, res) => {
   try {
     const { email, password } = await signupSchema.validateAsync(req.body);
@@ -22,8 +21,8 @@ export const signup = async (req, res) => {
     const newUser = await User.create({ email, password: hashedPassword });
     newUser.password = undefined;
     res.status(201).json({ success: true, message: "User created successfully!", data: newUser });
-  } catch (err) {
-    res.status(400).json({ error: err.message });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
   }
 };
 
@@ -66,7 +65,16 @@ export const signin = async (req, res) => {
         token,
         message: "Logged in successfully",
       });
-  } catch (err) {
-    res.status(400).json({ error: err.message });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+
+// TODO: signout functionality
+export const signout = (req, res) => {
+  try {
+    res.status(200).clearCookie("Authorization").json({ success: true, message: "Logged out successfully!" });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
   }
 };
