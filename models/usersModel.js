@@ -12,11 +12,10 @@ const userSchema = new Schema(
     },
     password: { type: String, required: [true, "Password must be provided!"], select: false, trim: true },
     verified: { type: Boolean, default: false },
-    verified: { type: Boolean, default: false },
     verificationCode: { type: String, select: false },
-    verificationCodeValidation: { type: Number, select: false },
+    verificationCodeValidation: { type: Date, select: false },
     forgotPasswordCode: { type: String, select: false },
-    forgotPasswordCodeValidation: { type: Number, select: false },
+    forgotPasswordCodeValidation: { type: Date, select: false },
   },
   { timestamps: true }
 );

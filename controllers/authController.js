@@ -4,6 +4,9 @@ import User from "../models/usersModel.js";
 import { comparePassword, hashPassword } from "../utils/passwordHelper.js";
 import JWT from "jsonwebtoken";
 import { sendResponse } from "../utils/responseHelper.js";
+import { mailTransporter } from "../utils/mail.js";
+import { generateHashedVerificationCode } from "../utils/crypto.js";
+
 export const signup = async (req, res) => {
   try {
     const { email, password } = await signupSchema.validateAsync(req.body);
@@ -74,6 +77,55 @@ export const signin = async (req, res) => {
 export const signout = (req, res) => {
   try {
     res.status(200).clearCookie("Authorization").json({ success: true, message: "Logged out successfully!" });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+
+export const sendVerificationCode = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    const existingUser = await User.findOne({ email });
+    if (!existingUser) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    const { code, hashedCode } = generateHashedVerificationCode(6, ENV.verification_secret_key);
+
+    const info = await mailTransporter.sendMail({
+      from: ENV.sender_mail_id,
+      to: existingUser.email,
+      subject: "Your Verification Code",
+      text: `Your verification code is ${code}. It will expire in 5 minutes.`,
+      html: `
+    <div style="font-family: Arial, sans-serif; padding: 10px;">
+      <h2>Your Verification Code</h2>
+      <p>Use the code below to verify your email address:</p>
+
+      <div style="
+        font-size: 24px;
+        font-weight: bold;
+        letter-spacing: 4px;
+        margin: 15px 0;
+        color: #2c3e50;">
+        ${code}
+      </div>
+
+      <p>This code will expire in <b>5 minutes</b>.</p>
+      <p>If you did not request this, please ignore this email.</p>
+    </div>
+  `,
+    });
+
+    if (info.accepted[0] === existingUser.email) {
+      console.log("Message sent:", info.messageId, info);
+      existingUser.verificationCode = hashedCode;
+      existingUser.verificationCodeValidation = Date.now();
+      await existingUser.save();
+    }
+
+    res.status(200).json({ success: true, message: "Verification code send to email!" });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
