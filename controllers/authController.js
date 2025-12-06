@@ -1,5 +1,5 @@
 import { ENV } from "../config/index.js";
-import { signinSchema, signupSchema, verificationSchema } from "../middlewares/validator.js";
+import { changePasswordSchema, signinSchema, signupSchema, verificationSchema } from "../middlewares/validator.js";
 import User from "../models/usersModel.js";
 import { comparePassword, hashPassword } from "../utils/passwordHelper.js";
 import JWT from "jsonwebtoken";
@@ -186,6 +186,40 @@ export const verifyVerificationCode = async (req, res) => {
       success: true,
       message: "You are verified!",
     });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+
+export const updatePassword = (req, res) => {
+  try {
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+
+// TODO: Change password functionality
+export const changePassword = async (req, res) => {
+  try {
+    const { userId, verified } = req.user;
+    const { oldPassword, newPassword } = await changePasswordSchema.validateAsync(req.body);
+    if (!verified) {
+      return res.status(400).json({ success: false, message: "User not verified" });
+    }
+
+    const existingUser = await User.findOne({ _id: userId }).select("+password");
+    if (!existingUser) {
+      return res.status(400).json({ success: false, message: "User not found" });
+    }
+
+    const isValidPassword = await comparePassword(oldPassword, existingUser.password);
+    if (!isValidPassword) {
+      return res.status(401).json({ success: false, message: "Invalid credentials" });
+    }
+
+    const hashedPassword = await hashPassword(newPassword);
+    existingUser.password = hashedPassword;
+    res.status(200).json({ success: false, message: "Password updated successfully!" });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
