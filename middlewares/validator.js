@@ -43,3 +43,48 @@ export const signinSchema = Joi.object({
       "string.pattern.base": "Password must include uppercase, lowercase, number, and special character",
     }),
 });
+export const verificationSchema = Joi.object({
+  email: Joi.string()
+    .email({ tlds: { allow: true } }) // allows all valid TLDs
+    .required()
+    .messages({
+      "string.empty": "Email is required",
+      "string.email": "Enter a valid email address",
+    }),
+
+  passCode: Joi.string()
+    .min(6) // minimum length
+    .max(10) // max length
+    .required()
+    .messages({
+      "string.empty": "Passcode is required",
+      "string.min": "Passcode must be at least 6 characters",
+      "string.max": "Passcode must not exceed 128 characters",
+    }),
+});
+
+export const changePasswordSchema = Joi.object({
+  oldPassword: Joi.string()
+    .min(8) // minimum length
+    .max(128) // max length
+    .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/)
+    .required()
+    .messages({
+      "string.empty": "Old password is required",
+      "string.min": "Old password must be at least 8 characters",
+      "string.max": "Old password must not exceed 128 characters",
+      "string.pattern.base": "Old password must include uppercase, lowercase, number, and special character",
+    }),
+
+  newPassword: Joi.string()
+    .min(8) // minimum length
+    .max(128) // max length
+    .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/)
+    .required()
+    .messages({
+      "string.empty": "New password is required",
+      "string.min": "New password must be at least 8 characters",
+      "string.max": "New password must not exceed 128 characters",
+      "string.pattern.base": "New password must include uppercase, lowercase, number, and special character",
+    }),
+});

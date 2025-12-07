@@ -10,13 +10,17 @@ const userSchema = new Schema(
       minLength: [5, "Email Id must be at least 5 characters!"],
       lowercase: true,
     },
-    password: { type: String, required: [true, "Password must be provided!"], select: false, trim: true },
-    verified: { type: Boolean, default: false },
+    password: {
+      type: String,
+      required: [true, "Password must be provided!"],
+      select: false,
+      trim: true,
+    },
     verified: { type: Boolean, default: false },
     verificationCode: { type: String, select: false },
-    verificationCodeValidation: { type: Number, select: false },
+    verificationCodeExpiresAt: { type: Date, select: false },
     forgotPasswordCode: { type: String, select: false },
-    forgotPasswordCodeValidation: { type: Number, select: false },
+    forgotPasswordExpiresAt: { type: Date, select: false },
   },
   { timestamps: true }
 );
