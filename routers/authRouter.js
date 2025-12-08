@@ -6,16 +6,22 @@ import {
   sendVerificationCode,
   verifyVerificationCode,
   changePassword,
+  sendForgotPasswordCode,
+  verifyForgotPassword,
 } from "../controllers/authController.js";
 import { identification } from "../middlewares/authMiddleware.js";
 
 const router = express.Router();
 
 router.post("/signup", signup);
-router.post("/signin", signin);
-router.post("/signout", identification, signout);
-router.patch("/send-verification-code", identification, sendVerificationCode);
-router.patch("/verify-verification-code", identification, verifyVerificationCode);
-router.patch("/change-password", identification, changePassword);
+router.post("/login", signin);
+router.post("/logout", identification, signout);
+
+router.patch("/verification-code", identification, sendVerificationCode);
+router.patch("/verification-code/verify", identification, verifyVerificationCode);
+
+router.patch("/password", identification, changePassword);
+router.patch("/password/forgot", sendForgotPasswordCode);
+router.patch("/password/forgot/verify", verifyForgotPassword);
 
 export default router;

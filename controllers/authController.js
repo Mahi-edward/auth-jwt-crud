@@ -1,5 +1,11 @@
 import { ENV } from "../config/index.js";
-import { changePasswordSchema, signinSchema, signupSchema, verificationSchema } from "../middlewares/validator.js";
+import {
+  changePasswordSchema,
+  FPVerificationSchema,
+  signinSchema,
+  signupSchema,
+  verificationSchema,
+} from "../middlewares/validator.js";
 import User from "../models/usersModel.js";
 import { comparePassword, hashPassword } from "../utils/passwordHelper.js";
 import JWT from "jsonwebtoken";
@@ -220,6 +226,105 @@ export const changePassword = async (req, res) => {
     const hashedPassword = await hashPassword(newPassword);
     existingUser.password = hashedPassword;
     res.status(200).json({ success: false, message: "Password updated successfully!" });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+
+// TODO: Send forgot password code
+export const sendForgotPasswordCode = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    const existingUser = await User.findOne({ email });
+    if (!existingUser) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    const code = generateVerificationCode();
+    const hashedCode = hashVerificationCode(code, ENV.verification_secret_key);
+
+    const info = await mailTransporter.sendMail({
+      from: ENV.sender_mail_id,
+      to: existingUser.email,
+      subject: "Your Forgot Password Verification Code",
+      text: `Your verification code is ${code}. It will expire in 5 minutes.`,
+      html: `
+    <div style="font-family: Arial, sans-serif; padding: 10px;">
+      <h2>Your Forgot Password Verification Code</h2>
+      <p>Use the code below to verify your email address:</p>
+
+      <div style="
+        font-size: 24px;
+        font-weight: bold;
+        letter-spacing: 4px;
+        margin: 15px 0;
+        color: #2c3e50;">
+        ${code}
+      </div>
+
+      <p>This code will expire in <b>${ENV.verification_code_expiry_minutes} minutes</b>.</p>
+      <p>If you did not request this, please ignore this email.</p>
+    </div>
+  `,
+    });
+
+    if (info.accepted[0] === existingUser.email) {
+      const codeExpiresAt = new Date(Date.now() + ENV.verification_code_expiry_minutes * 60 * 1000);
+      existingUser.forgotPasswordCode = hashedCode;
+      existingUser.forgotPasswordExpiresAt = codeExpiresAt;
+      await existingUser.save();
+    }
+
+    res.status(200).json({ success: true, message: "Verification code send to email!" });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+
+export const verifyForgotPassword = async (req, res) => {
+  try {
+    const { email, passCode, newPassword } = await FPVerificationSchema.validateAsync(req.body);
+
+    const existingUser = await User.findOne({ email }).select("+forgotPasswordCode +forgotPasswordExpiresAt");
+
+    // Check if user present or not
+    if (!existingUser) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    if (!existingUser.forgotPasswordCode || !existingUser.forgotPasswordExpiresAt) {
+      return res.status(400).json({
+        success: false,
+        message: "Verification code not found!",
+      });
+    }
+
+    const hashedCode = hashVerificationCode(passCode, ENV.verification_secret_key);
+
+    // verify user given code and store code same or not!
+    if (hashedCode !== existingUser.forgotPasswordCode) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid code",
+      });
+    }
+
+    // Check verification code expire or not!
+    if (new Date() > existingUser.forgotPasswordExpiresAt) {
+      return res.status(410).json({
+        success: false,
+        message: "Verification code expired",
+      });
+    }
+
+    const hashedPassword = await hashPassword(newPassword);
+
+    existingUser.password = hashedPassword;
+    existingUser.forgotPasswordCode = undefined;
+    existingUser.forgotPasswordExpiresAt = undefined;
+    await existingUser.save();
+    res.status(200).json({ success: false, message: "New password updated successfully!" });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
